@@ -28,7 +28,7 @@ class Kernel extends ConsoleKernel
 
         foreach ($users as $user) {
             $schedule->job(new SynchronizeJob($user->id))
-                ->everyFiveMinutes()
+                ->everyMinute()
                 ->between(
                     config('synchronization.sync_between.min'),
                     config('synchronization.sync_between.max'))
