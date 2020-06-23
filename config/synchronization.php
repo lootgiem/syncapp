@@ -4,8 +4,8 @@ return [
     'remove-past-events' => false,
 
     'sync_between' => [
-        'min' => '7:00',
-        'max' => '22:20'
+        'min' => '6:30',
+        'max' => '00:00'
     ],
 
     'sync_period' => [
