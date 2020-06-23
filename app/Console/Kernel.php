@@ -27,7 +27,8 @@ class Kernel extends ConsoleKernel
         $users = User::whereNotNull('email_verified_at')->get();
 
         foreach ($users as $user) {
-            $schedule->job(new SynchronizeJob($user->id));
+            $schedule->job(new SynchronizeJob($user->id))
+                ->everyMinute();
         }
     }
 
