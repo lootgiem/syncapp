@@ -104,7 +104,7 @@ class Doctolib extends Platform
      */
     public function transformEventForPlatform($event)
     {
-        $title = 'Absence: ' . $event->summary . ' (Supprimer l\'événement dans google calendar pour supprimer l\'absence) ';
+        $title = $event->summary . ' (Supprimer l\'événement dans google calendar pour supprimer l\'absence) ';
 
         return [
             'all_day' => boolval($event->all_day),
