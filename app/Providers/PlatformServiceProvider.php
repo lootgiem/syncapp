@@ -3,8 +3,8 @@
 namespace App\Providers;
 
 use App\Models\Credential;
-use App\Services\GoogleOauthClient;
 use GuzzleHttp\Client;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
@@ -35,7 +35,14 @@ class PlatformServiceProvider extends ServiceProvider
     protected function registerServices()
     {
         $this->app->bind(Client::class, function () {
-            return new Client(['cookies' => true, 'verify' => 'C:\wamp\bin\php\cacert.pem']);
+
+            $clientConfig = ['cookies' => true];
+
+            if (App::environment('local')) {
+                array_push($clientConfig, ['verify' => 'C:\wamp\bin\php\cacert.pem']);
+            }
+
+            return new Client($clientConfig);
         });
     }
 }
