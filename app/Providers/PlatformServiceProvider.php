@@ -39,7 +39,7 @@ class PlatformServiceProvider extends ServiceProvider
             $clientConfig = ['cookies' => true];
 
             if (App::environment('local')) {
-                array_push($clientConfig, ['verify' => 'C:\wamp\bin\php\cacert.pem']);
+                $clientConfig = array_merge($clientConfig, ['verify' => 'C:\wamp\bin\php\cacert.pem']);
             }
 
             return new Client($clientConfig);

@@ -12,10 +12,14 @@ use App\Services\CredentialsStrategies\CredentialStrategy;
 use App\Services\CredentialsStrategies\OauthStrategy;
 use App\Services\GoogleOauthClient;
 use Carbon\Carbon;
+use Carbon\Exceptions\InvalidFormatException;
+use ErrorException;
 use Google_Service_Calendar;
 use Google_Service_Calendar_Event;
 use GuzzleHttp\Client;
 use Illuminate\Support\Collection;
+use LogicException;
+use Mockery\Exception;
 
 class GoogleCalendar extends Platform
 {
@@ -98,6 +102,11 @@ class GoogleCalendar extends Platform
         }
 
         return $eventsAccumulator;
+    }
+
+    protected function filterRawEvents($rawEvents)
+    {
+        return $rawEvents->whereNull('recurrence');
     }
 
     /**
@@ -185,11 +194,11 @@ class GoogleCalendar extends Platform
         $startDate = Carbon::createFromTimeString($event->start_date, 'Europe/Paris');
         $endDate = Carbon::createFromTimeString($event->end_date, 'Europe/Paris');
 
-        if (!is_null($event->all_day) and $event->all_day === True) {
+        if ($event->all_day) {
             return [
-                "start_date" => $startDate->toAtomString(),
+                "start_date" => $startDate->toDateString(),
                 "start_dateTime" => null,
-                "end_date" => $startDate->addDay()->toAtomString(),
+                "end_date" => $startDate->addDay()->toDateString(),
                 "end_dateTime" => null,
             ];
         }
@@ -208,20 +217,29 @@ class GoogleCalendar extends Platform
      */
     private function getEventDate($event)
     {
-        $startDate = Carbon::createFromFormat(Carbon::RFC3339, $event->getStart()->getDateTime());
-        $endDate = Carbon::createFromFormat(Carbon::RFC3339, $event->getEnd()->getDateTime());
+        if (!is_null($event->getStart()->getDateTime())) {
 
-        if (is_null($event->getStart()->getDate())) {
+            $startDate = Carbon::createFromFormat(Carbon::RFC3339, $event->getStart()->getDateTime());
+            $endDate = Carbon::createFromFormat(Carbon::RFC3339, $event->getEnd()->getDateTime());
+
             return [
                 'all_day' => 0,
                 'start_date' => $startDate->toDateTimeString(),
                 'end_date' => $endDate->toDateTimeString()
             ];
         }
-        return [
-            'all_day' => 1,
-            'start_date' => $startDate->toDateTimeString(),
-            'end_date' => $startDate->addDay()->addMinutes(-1)->toDateTimeString()
-        ];
+
+        if (!is_null($event->getStart()->getDate())) {
+
+            $startDate = Carbon::createFromFormat('!Y-m-d', $event->getStart()->getDate());
+
+            return [
+                'all_day' => 1,
+                'start_date' => $startDate->toDateTimeString(),
+                'end_date' => $startDate->addDay()->addMinutes(-1)->toDateTimeString()
+            ];
+        }
+
+        throw new LogicException('Date not available for Google calendar event : ' . json_encode($event));
     }
 }

@@ -53,7 +53,6 @@ abstract class Platform implements iPlatform
             $platform_id = $parameter;
         }
 
-
         if (!is_null($platform_id)) {
             if ($platform = PlatformModel::find($platform_id)) {
                 return app($platform->name);
@@ -64,17 +63,16 @@ abstract class Platform implements iPlatform
         return null;
     }
 
-    protected function filterRawEvents($rawEvents)
-    {
-        return $rawEvents;
-    }
-
     protected function transformToEvents($rawEvents)
     {
         $events = collect();
 
         foreach ($rawEvents as $rawEvent) {
-            $events->add($this->transformToEvent($rawEvent));
+            try {
+                $events->add($this->transformToEvent($rawEvent));
+            } catch (\Exception $e) {
+                Log::error('Error: "transformToEvents" -> ' . json_encode($rawEvent) . ' / message : ' . $e->getMessage());
+            }
         }
 
         return $events;
@@ -85,8 +83,12 @@ abstract class Platform implements iPlatform
         $rawEvents = collect();
 
         foreach ($events as $event) {
-            $rawEvent = $this->transformEventForPlatform($event);
-            $rawEvents->put($event->real_id, $rawEvent);
+            try {
+                $rawEvent = $this->transformEventForPlatform($event);
+                $rawEvents->put($event->real_id, $rawEvent);
+            } catch (\Exception $e) {
+                Log::error('Error: "transformEventsForPlatform" -> ' . json_encode($rawEvent) . ' / message : ' . $e->getMessage());
+            }
         }
 
         return $rawEvents;
@@ -118,6 +120,8 @@ abstract class Platform implements iPlatform
             }
         }
     }
+
+    abstract protected function filterRawEvents($rawEvents);
 
     abstract protected function retrieveRawEventsFromPlatform();
 

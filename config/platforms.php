@@ -11,9 +11,7 @@ return [
             'readable_name' => 'Doctolib',
             'available' => true,
             'login_endpoint' => 'https://m.doctolib.fr/login.json',
-            'api_endpoint' => 'https://m.doctolib.fr/api/',
-//            'username' => 'sjegat@hypno-therapeute.com',
-//            'password' => 'Leoelena1978'
+            'api_endpoint' => 'https://m.doctolib.fr/api/'
         ],
 
         'google_calendar' => [
