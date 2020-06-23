@@ -91,10 +91,7 @@ class GoogleCalendar extends Platform
     {
         $eventsAccumulator = collect();
         $events = $this->googleCalendarClient->events->listEvents($calendar_id, $optParams);
-
-        foreach ($events->getItems() as $item) {
-            $eventsAccumulator->add($item);
-        }
+        $eventsAccumulator = $eventsAccumulator->merge($events->getItems());
 
         if ($pageToken = $events->getNextPageToken()) {
             $optParams['pageToken'] = $pageToken;
