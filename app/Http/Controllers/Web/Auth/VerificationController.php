@@ -1,0 +1,61 @@
+<?php
+
+namespace App\Http\Controllers\Web\Auth;
+
+use App\Http\Controllers\Controller;
+use App\Providers\RouteServiceProvider;
+use Illuminate\Foundation\Auth\VerifiesEmails;
+use Illuminate\Http\Request;
+use Laravel\Passport\ClientRepository;
+
+class VerificationController extends Controller
+{
+    /*
+    |--------------------------------------------------------------------------
+    | Email Verification Controller
+    |--------------------------------------------------------------------------
+    |
+    | This controller is responsible for handling email verification for any
+    | user that recently registered with the application. Emails may also
+    | be re-sent if the user didn't receive the original email message.
+    |
+    */
+
+    use VerifiesEmails;
+
+    /**
+     * Where to redirect users after verification.
+     *
+     * @var string
+     */
+    protected $redirectTo = RouteServiceProvider::HOME;
+
+
+    protected $clients;
+
+    /**
+     * Create a new controller instance.
+     *
+     * @param ClientRepository $clients
+     */
+    public function __construct(ClientRepository $clients)
+    {
+        $this->middleware('auth');
+        $this->middleware('signed')->only('verify');
+        $this->middleware('throttle:6,1')->only('verify', 'resend');
+
+        $this->clients = $clients;
+    }
+
+    /**
+     * The user has been verified.
+     *
+     * @param Request $request
+     * @return mixed
+     */
+    protected function verified(Request $request)
+    {
+        $name = config('app.name').' ClientCredentials Grant Client';
+        $this->clients->createPasswordGrantClient($request->user()->getAuthIdentifier(), $name, '');
+    }
+}
