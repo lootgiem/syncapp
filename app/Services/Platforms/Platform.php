@@ -5,7 +5,9 @@ namespace App\Services\Platforms;
 
 
 use App\Contracts\Services\Platforms\iPlatform;
+use App\Models\Credential;
 use App\Models\Platform as PlatformModel;
+use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Traits\Macroable;
@@ -45,7 +47,7 @@ abstract class Platform implements iPlatform
     {
         $platform_id = null;
 
-        if (is_object($parameter) && isset($parameter->platform_id)) {
+        if ($parameter instanceof Credential || $parameter instanceof FormRequest) {
             $platform_id = $parameter->platform_id;
         }
 
@@ -78,7 +80,7 @@ abstract class Platform implements iPlatform
         return $events;
     }
 
-    protected function transformEventsForPlatform($events)
+    protected function transformEventsForPlatform(Collection $events)
     {
         $rawEvents = collect();
 
@@ -87,21 +89,21 @@ abstract class Platform implements iPlatform
                 $rawEvent = $this->transformEventForPlatform($event);
                 $rawEvents->put($event->real_id, $rawEvent);
             } catch (\Exception $e) {
-                Log::error('Error: "transformEventsForPlatform" -> ' . json_encode($rawEvent) . ' / message : ' . $e->getMessage());
+                Log::error('Error: "transformEventsForPlatform" -> ' . json_encode($event) . ' / message : ' . $e->getMessage());
             }
         }
 
         return $rawEvents;
     }
 
-    protected function pushEventsToPlatform($rawEvents)
+    protected function pushEventsToPlatform(Collection $rawEvents)
     {
         $pushedEventsIds = collect();
 
         foreach ($rawEvents as $eventRealId => $rawEvent) {
             try {
-                $ids = $this->pushEventToPlatform($rawEvent);
-                $pushedEventsIds->put($eventRealId, $ids);
+                $id = $this->pushEventToPlatform($rawEvent);
+                $pushedEventsIds->put($eventRealId, $id);
             } catch (\Exception $e) {
                 Log::error('Error: "pushEventsToPlatform " -> ' . json_encode($rawEvent) . ' / message : ' . $e->getMessage());
             }

@@ -6,7 +6,6 @@ namespace App\Services\Synchronizer;
 
 use App\Repositories\EventRepository;
 use App\Repositories\SynchronizedEventRepository;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 
 class DatabaseUpdater
@@ -56,21 +55,17 @@ class DatabaseUpdater
 
         foreach ($addedIds as $credentialId => $pushedEventsIds) {
 
-            foreach ($pushedEventsIds as $eventRealId => $synchronizedEventRealIds) {
+            foreach ($pushedEventsIds as $eventRealId => $synchronizedEventRealId) {
 
                 $eventId = $events->where('real_id', $eventRealId)->first()->id;
-
-                foreach (Arr::wrap($synchronizedEventRealIds) as $synchronizedEventRealId) {
-
-                    SynchronizedEventRepository::store($eventId, $credentialId, $synchronizedEventRealId);
-                }
+                SynchronizedEventRepository::store($eventId, $credentialId, $synchronizedEventRealId);
             }
         }
     }
 
     protected function addToReport($eventsToPush, $eventsToRemove, $removedSynchronizedEvents)
     {
-        $this->addContent([
+        $this->addReportContent([
             'events_added' => $eventsToPush->map(function ($item) {
                 return $item->toArray();
             }),

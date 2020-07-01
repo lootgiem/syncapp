@@ -16,6 +16,9 @@ $this->router->group(['middleware' => ['auth', 'verified']], function ($router) 
     Route::resource('credential', 'CredentialController')
         ->except(['create', 'edit', 'show']);
 
+    $router->get('/credential/agendas/{credential}', 'CredentialController@agendas')
+        ->name('credential.agendas');
+
     $this->router->group(['prefix' => 'connector', 'namespace' => 'Connectors'], function ($router) {
 
         $router->get('/oauth/callback', 'OauthController@callback')
@@ -23,7 +26,6 @@ $this->router->group(['middleware' => ['auth', 'verified']], function ($router) 
             ->name('oauth.callback');
 
         $router->get('/oauth/{credential}', 'OauthController@redirectToAuth')
-            ->middleware('can:update,credential')
             ->name('oauth.redirect-to-auth');
     });
 });

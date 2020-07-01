@@ -14,7 +14,10 @@ class Credential extends Model
      *
      * @var array
      */
-    protected $fillable = ['name', 'synchronized'];
+    protected $fillable = [
+        'name',
+        'synchronized'
+    ];
 
 
     protected $casts = [

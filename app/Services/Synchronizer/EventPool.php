@@ -14,12 +14,21 @@ class EventPool
     public function __construct($events, $synchronizedEvents)
     {
         $this->splitInternalExternalEvents($events, $synchronizedEvents);
+        $this->addOriginToInternalEvents();
     }
 
     protected function splitInternalExternalEvents($events, $synchronizedEvents)
     {
         $this->internalEvents = $events->withoutEvents($synchronizedEvents, ['real_id']);
         $this->externalEvents = $events->diff($this->internalEvents);
+    }
+
+    protected function addOriginToInternalEvents()
+    {
+        $this->internalEvents->each(function ($event) {
+            $credential = $event->credential;
+            $event->summary .= ' - ' . $credential->name . ' ' . $credential->platform->readable_name;
+        });
     }
 
     public function getInternalEvents()

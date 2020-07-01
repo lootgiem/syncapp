@@ -5,12 +5,31 @@ namespace App\Services\Platforms;
 
 
 use App\Contracts\Services\Connectors\iConnector;
+use App\Contracts\Services\CredentialsStrategies\iCredentialStrategy;
 use App\Models\Credential;
-use App\Services\CredentialsStrategies\CredentialStrategy;
 
-trait ConnectablePlatform
+abstract class ConnectablePlatform extends Platform
 {
-    protected Credential $credential;
+    /**
+     * @var Credential
+     */
+    private Credential $credential;
+
+    /**
+     * @var iConnector
+     */
+    private iConnector $connector;
+
+    /**
+     * @var iCredentialStrategy
+     */
+    private iCredentialStrategy $credentialStrategy;
+
+    public function __construct(iConnector $connector, iCredentialStrategy $credentialStrategy)
+    {
+        $this->connector = $connector;
+        $this->credentialStrategy = $credentialStrategy;
+    }
 
     public function setUser(Credential $credential)
     {
@@ -18,7 +37,7 @@ trait ConnectablePlatform
         $this->onceConnected();
     }
 
-    public function onceConnected()
+    private function onceConnected()
     {
         if (method_exists($this, 'whenConnected')) {
             $this->whenConnected();
@@ -33,26 +52,33 @@ trait ConnectablePlatform
     /**
      * @return iConnector
      */
-    public function getConnector()
+    protected function getConnector()
     {
-        if (property_exists($this, 'connector')) {
-            return $this->connector;
-        }
-        else {
-            throw new \LogicException('Connectable trait is used but connector attribute is not set.');
-        }
+        return $this->connector;
     }
 
     /**
-     * @return CredentialStrategy
+     * @return iCredentialStrategy
      */
     public function getCredentialStrategy()
     {
-        if (property_exists($this, 'credentialStrategy')) {
-            return $this->credentialStrategy;
+        return $this->credentialStrategy;
+    }
+
+    /**
+     * @return array
+     */
+    public function getAgendas()
+    {
+        if (!$this->getCurrentCredential()->platform->has_agendas) {
+            return array();
+        }
+
+        if (method_exists($this, 'retrieveAgendas')) {
+            return $this->retrieveAgendas()->all();
         }
         else {
-            throw new \LogicException('Connectable trait require credential strategy to be used.');
+            throw new \LogicException('Connectable platform used but retrieveAgendas method not defined');
         }
     }
 }

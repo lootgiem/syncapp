@@ -58,7 +58,7 @@ class PlatformUpdater
 
     protected function addToReport($credential, $eventsToAdd, $eventsToDelete)
     {
-        $this->addContent([
+        $this->addReportContent([
             'credential_id' => $credential->id,
             'credential_name' => $credential->name,
             'events_added' => $eventsToAdd->map(function ($item) {

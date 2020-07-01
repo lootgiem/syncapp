@@ -18,7 +18,7 @@ trait Reportable
         }
     }
 
-    public function addContent($content)
+    public function addReportContent($content)
     {
         $this->report->add($content);
     }

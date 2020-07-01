@@ -36,7 +36,7 @@ class RefreshCommand extends Command
     public function handle()
     {
         $this->call('migrate:refresh');
-        $this->call('me:install');
+        $this->call('me:platforms');
         $this->call('db:seed');
 
         $this->info(config('app.name') . ' successfully refreshed.');

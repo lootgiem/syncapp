@@ -63,7 +63,11 @@ class UsernamePasswordConnector extends Connector
         }
 
         if ($response->getStatusCode() == 200) {
-            $credential = $credential->forceFill(['valid' => true]);
+
+            $credential = $credential->forceFill([
+                'valid' => $this->isValidCredential($credential)
+            ]);
+
             $credential->save();
             return $credential;
         }

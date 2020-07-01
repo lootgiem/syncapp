@@ -46,8 +46,7 @@
                                 {{ credential.platform.readable_name }}
                             </td>
                             <td style="vertical-align: middle;">
-                                {{ credential.synchronized ? credential.redirect ?  "Connection required" : "Yes" :
-                                "No" }}
+                                {{ getSynchronizedMessage(credential) }}
                             </td>
                             <td  style="vertical-align: middle;">
                                 <a v-if="credential.redirect" :href="credential.redirect"
@@ -108,6 +107,18 @@
                     .then(response => {
                         this.credentials = response.data.data
                     });
+            },
+
+            getSynchronizedMessage(credential) {
+                if(credential.redirect){
+                    return 'No : Connection required'
+                }
+
+                if(credential.platform.has_agendas && credential.agenda === null) {
+                    return 'No : Edit to select an agenda'
+                }
+
+                return credential.synchronized ? "Yes" : "No";
             },
 
             addCredential () {

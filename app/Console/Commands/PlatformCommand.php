@@ -15,6 +15,7 @@ class PlatformCommand extends Command
      */
     protected $signature = 'me:platform
             {--name= : The name of the platform}
+            {--has_agendas= : Does platform allow calendar selection}
             {--readable_name= : The readable name of the platform}
             {--available= : The availability of the platform}';
 
@@ -44,6 +45,7 @@ class PlatformCommand extends Command
     public function handle(PlatformRepository $platformRepository)
     {
         $name = $this->askString('name', 'What should be the Platform name?');
+        $hasAgendas = $this->askBoolean('has_agendas', 'Does platform need calendar selection ?', true);
         $readableName = $this->askString('readable_name', 'What should be the readable name for ' . $name . '?', Str::kebab($name));
         $available = $this->askBoolean('available', 'Is ' . $name . ' platform available?', true);
 
@@ -52,11 +54,11 @@ class PlatformCommand extends Command
         $available_str = (!$available) ? ' but not available for clients' : ' and available for clients';
 
         if (!is_null($platform)) {
-            $platform = $platformRepository->update($platform, $name, $readableName, $available);
+            $platform = $platformRepository->update($platform, $hasAgendas, $name, $readableName, $available);
             $this->line('<comment>Platform ' . $platform->name . ' (' . $platform->readable_name . ') updated' . $available_str . '.</comment> ');
         }
         else {
-            $platform = $platformRepository->store($name, $readableName, $available);
+            $platform = $platformRepository->store($hasAgendas, $name, $readableName, $available);
             $this->line('<comment>Platform ' . $platform->name . ' (' . $platform->readable_name . ') created' . $available_str . '.</comment> ');
         }
     }

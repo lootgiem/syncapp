@@ -10,46 +10,30 @@ use App\Services\Connectors\UsernamePasswordConnector;
 use App\Services\CredentialsStrategies\CredentialStrategy;
 use App\Services\DoctolibApi;
 use Carbon\Carbon;
+use Exception;
 use GuzzleHttp\Client;
 use Illuminate\Support\Collection;
 
-class Doctolib extends Platform
+class Doctolib extends ConnectablePlatform
 {
-    use ConnectablePlatform;
-
     /**
      * @var DoctolibApi
      */
     protected DoctolibApi $doctolibApi;
-
-    /**
-     * @var bool
-     */
-    protected bool $resetEvents = true;
-
-    /**
-     * @var UsernamePasswordConnector
-     */
-    protected UsernamePasswordConnector $connector;
-
-    /**
-     * @var CredentialStrategy
-     */
-    protected CredentialStrategy $credentialStrategy;
-
 
     public function __construct(Client $httpClient)
     {
         $loginUrl = config('platforms.list.doctolib.login_endpoint');
         $data = ['kind' => 'doctor'];
 
-        $this->connector = new UsernamePasswordConnector($httpClient, $loginUrl, $data);
-        $this->credentialStrategy = new CredentialStrategy($this->connector);
+        $connector = new UsernamePasswordConnector($httpClient, $loginUrl, $data);
+        $credentialStrategy = new CredentialStrategy($connector);
+        parent::__construct($connector, $credentialStrategy);
     }
 
     public function whenConnected()
     {
-        $httpClient = $this->connector->getHttpClient();
+        $httpClient = $this->getConnector()->getHttpClient();
         $this->doctolibApi = new DoctolibApi($httpClient);
     }
 
@@ -69,7 +53,9 @@ class Doctolib extends Platform
      */
     public function filterRawEvents($rawEvents)
     {
-        return $rawEvents->where('patient_id', '!=', null);
+        return $rawEvents->where('type', 'blck')
+            ->where('recurring', false)
+            ->merge($rawEvents->where('type', 'appt'));
     }
 
     /**
@@ -79,7 +65,7 @@ class Doctolib extends Platform
     public function pushEventToPlatform($rawEvent)
     {
         $pushedEvents = $this->doctolibApi->addAbsence($rawEvent);
-        return $pushedEvents->pluck('id')->all();
+        return $pushedEvents['id'];
     }
 
     /**
@@ -89,13 +75,24 @@ class Doctolib extends Platform
     {
         $startDate = Carbon::now('Europe/Paris');
         $endDate = Carbon::now('Europe/Paris')->addMonths(config('synchronization.sync_period.months'));
+        $agenda = $this->getCurrentCredential()->agenda;
 
-        $dates = [
+        $parameters = [
             "start_date" => $startDate->format("D M j Y H:i:s eO"),
-            "end_date" => $endDate->format("D M j Y H:i:s eO")
+            "end_date" => $endDate->format("D M j Y H:i:s eO"),
+            'agenda_ids[]' => $agenda
         ];
 
-        return $this->doctolibApi->getAppointments($dates);
+        return $this->doctolibApi->getEvents($parameters);
+    }
+
+    /**
+     * @return Collection
+     */
+    protected function retrieveAgendas()
+    {
+        $agendas = collect($this->doctolibApi->getAccountInformation()->agendas);
+        return $agendas->pluck('name', 'id');
     }
 
     /**
@@ -104,13 +101,12 @@ class Doctolib extends Platform
      */
     public function transformEventForPlatform($event)
     {
-        $title = $event->summary . ' (Supprimer l\'événement dans google calendar pour supprimer l\'absence) ';
-
         return [
+            'agenda_id' => $this->getCurrentCredential()->agenda,
             'all_day' => boolval($event->all_day),
             'start_date' => $event->start_date,
             'end_date' => $event->end_date,
-            'title' => $title,
+            'title' => $event->summary,
             'type' => "blck"
         ];
     }
@@ -145,8 +141,11 @@ class Doctolib extends Platform
      */
     private function getLocation($rawEvent)
     {
-        $agendas = collect($this->doctolibApi->getAccountInformation()->agendas);
-        return strtolower($agendas->pluck('name', 'id')->get($rawEvent->agenda_id, ""));
+        if ($rawEvent->type == 'appt') {
+            return strtolower($this->retrieveAgendas()->get($rawEvent->agenda_id, ""));
+        }
+
+        return null;
     }
 
     /**
@@ -155,11 +154,15 @@ class Doctolib extends Platform
      */
     private function getSummary($rawEvent)
     {
-        $patient = $rawEvent->patient;
-        $formatedName = $patient->last_name . ' ' . $patient->first_name;
-        $status = ($rawEvent->status != "confirmed") ? ' Annulé - ' : '';
-        $isNewMessage = (boolval($rawEvent->new_patient)) ? ' (Première fois)' : '';
-        return $status . $formatedName . $isNewMessage . ' - Doctolib';
+        if ($rawEvent->type == 'appt') {
+            $patient = $rawEvent->patient;
+            $formatedName = $patient->last_name . ' ' . $patient->first_name;
+            $status = ($rawEvent->status != "confirmed") ? ' Annulé - ' : '';
+            $isNewMessage = (boolval($rawEvent->new_patient)) ? ' (Première fois)' : '';
+            return $status . $formatedName . $isNewMessage;
+        }
+
+        return $rawEvent->title ?? 'Absence';
     }
 
     /**
@@ -168,21 +171,25 @@ class Doctolib extends Platform
      */
     private function getDescription($rawEvent)
     {
-        $patient = $rawEvent->patient;
-        $formatedName = $patient->last_name . ' ' . $patient->first_name;
-        return 'Rendez-vous avec ' . $formatedName
-            . "\nTel : " . $patient->phone_number
-            . "\nEmail : " . $patient->email
-            . "\nAdresse : " . $this->getAdress($patient)
-            . "\nInfo Crucial : " . $patient->crucial_info
-            . "\nNote : " . $patient->notes;
+        if ($rawEvent->type == 'appt') {
+            $patient = $rawEvent->patient;
+            $formatedName = $patient->last_name . ' ' . $patient->first_name;
+            return 'Rendez-vous avec ' . $formatedName
+                . "\nTel : " . $patient->phone_number
+                . "\nEmail : " . $patient->email
+                . "\nAdresse : " . $this->getAddress($patient)
+                . "\nInfo Crucial : " . $patient->crucial_info
+                . "\nNote : " . $patient->notes;
+        }
+
+        return null;
     }
 
     /**
      * @param array $patient
      * @return string
      */
-    private function getAdress($patient)
+    private function getAddress($patient)
     {
         if (!empty($patient->address) && !empty($patient->city) && !empty($patient->zipcode)) {
             return $patient->address . ' / ' . $patient->city . ' / ' . $patient->zipcode;
@@ -190,6 +197,5 @@ class Doctolib extends Platform
         else {
             return 'Non renseigné.';
         }
-
     }
 }

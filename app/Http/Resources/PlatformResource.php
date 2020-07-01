@@ -18,7 +18,8 @@ class PlatformResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
-            'readable_name' => $this->readable_name
+            'readable_name' => $this->readable_name,
+            'has_agendas' => $this->has_agendas
         ];
     }
 }

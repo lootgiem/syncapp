@@ -4,14 +4,14 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 
-class InstallCommand extends Command
+class PlatformsCommand extends Command
 {
     /**
      * The name and signature of the console command.
      *
      * @var string
      */
-    protected $signature = 'me:install';
+    protected $signature = 'me:platforms';
 
     /**
      * The console command description.
@@ -43,6 +43,7 @@ class InstallCommand extends Command
 
             $this->call('me:platform', [
                 '--name' => $function->getShortName(),
+                '--has_agendas' => $value['has_agendas'],
                 '--readable_name' => $value['readable_name'],
                 '--available' => $value['available']]);
         }

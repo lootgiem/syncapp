@@ -16,4 +16,9 @@ class CredentialException extends Exception
     {
         return ValidationException::withMessages(['input' => 'We are not able to get you connected to this platform with these credentials.']);
     }
+
+    public static function wrongAgenda()
+    {
+        return ValidationException::withMessages(['input' => 'You must select an agenda to synchronize.']);
+    }
 }

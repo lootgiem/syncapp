@@ -2080,6 +2080,19 @@ function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "functi
 //
 //
 //
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
 
 
 
@@ -2094,10 +2107,13 @@ function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "functi
       platforms_available: null,
       selected_platform_name: null,
       is_edit: false,
+      agendas: null,
+      has_agendas: null,
       form: {
         errors: [],
         id: null,
         platform_id: null,
+        agenda_id: null,
         name: null,
         "synchronized": 1,
         secret: null
@@ -2117,6 +2133,11 @@ function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "functi
       self.is_edit = true;
       self.edit(credential);
       self.setPlatformName();
+
+      if (self.has_agendas) {
+        self.getAgendas(credential);
+      }
+
       $('#modal-platform').modal('show');
     });
     _event_bus__WEBPACK_IMPORTED_MODULE_2__["default"].$on('secretFieldsUpdate', function (secret) {
@@ -2124,11 +2145,21 @@ function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "functi
     });
   },
   methods: {
-    getAvailablePlatforms: function getAvailablePlatforms() {
+    getAgendas: function getAgendas(credential) {
       var _this = this;
 
+      axios.get('/credential/agendas/' + credential.id).then(function (response) {
+        _this.agendas = response.data.data;
+      });
+    },
+    canUpdateAgenda: function canUpdateAgenda() {
+      return this.is_edit && this.has_agendas;
+    },
+    getAvailablePlatforms: function getAvailablePlatforms() {
+      var _this2 = this;
+
       axios.get('/api/platforms').then(function (response) {
-        _this.platforms_available = response.data.data;
+        _this2.platforms_available = response.data.data;
       });
     },
     setPlatformName: function setPlatformName() {
@@ -2138,6 +2169,8 @@ function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "functi
     reset: function reset() {
       this.is_edit = false;
       this.selected_platform_name = null;
+      this.agendas = null;
+      this.has_agendas = null;
       this.form = this.duplicate(this.empty_form);
       $('#modal-add-platform select').prop('selectedIndex', 0);
       _event_bus__WEBPACK_IMPORTED_MODULE_2__["default"].$emit('resetSecret');
@@ -2156,8 +2189,10 @@ function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "functi
     },
     edit: function edit(credential) {
       this.selected_platform_name = credential.name;
+      this.has_agendas = credential.platform.has_agendas;
       this.form.id = credential.id;
       this.form.platform_id = credential.platform.id;
+      this.form.agenda_id = credential.agenda;
       this.form.name = credential.name;
       this.form["synchronized"] = credential["synchronized"];
     },
@@ -2169,14 +2204,14 @@ function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "functi
       this.persistCredential('put', '/credential/' + this.form.id, this.form);
     },
     persistCredential: function persistCredential(method, uri, form) {
-      var _this2 = this;
+      var _this3 = this;
 
       form.errors = [];
       axios[method](uri, form).then(function (response) {
         _event_bus__WEBPACK_IMPORTED_MODULE_2__["default"].$emit('credentialChange');
         $('#modal-platform').modal('hide');
 
-        _this2.reset();
+        _this3.reset();
       })["catch"](function (error) {
         if (_typeof(error.response.data) === 'object') {
           form.errors = _.flatten(_.toArray(error.response.data.errors));
@@ -2184,7 +2219,6 @@ function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "functi
           form.errors = ['Something went wrong. Please try again.'];
         }
       });
-      console.log();
     }
   }
 });
@@ -2378,7 +2412,6 @@ __webpack_require__.r(__webpack_exports__);
 //
 //
 //
-//
 
 
 /* harmony default export */ __webpack_exports__["default"] = ({
@@ -2407,6 +2440,17 @@ __webpack_require__.r(__webpack_exports__);
       axios.get('/credential').then(function (response) {
         _this.credentials = response.data.data;
       });
+    },
+    getSynchronizedMessage: function getSynchronizedMessage(credential) {
+      if (credential.redirect) {
+        return 'No : Connection required';
+      }
+
+      if (credential.platform.has_agendas && credential.agenda === null) {
+        return 'No : Edit to select an agenda';
+      }
+
+      return credential["synchronized"] ? "Yes" : "No";
     },
     addCredential: function addCredential() {
       _event_bus__WEBPACK_IMPORTED_MODULE_0__["default"].$emit('addCredential');
@@ -81582,6 +81626,58 @@ var render = function() {
                 ? _c("google-calendar-form")
                 : _vm._e(),
               _vm._v(" "),
+              _vm.canUpdateAgenda()
+                ? _c(
+                    "div",
+                    { staticClass: "mt-3" },
+                    [
+                      _c("div", [_vm._v("Select an agenda to synchronize :")]),
+                      _vm._v(" "),
+                      _c(
+                        "b-form-select",
+                        {
+                          model: {
+                            value: _vm.form.agenda_id,
+                            callback: function($$v) {
+                              _vm.$set(_vm.form, "agenda_id", $$v)
+                            },
+                            expression: "form.agenda_id"
+                          }
+                        },
+                        [
+                          _c(
+                            "b-form-select-option",
+                            {
+                              attrs: { value: null, disabled: "", selected: "" }
+                            },
+                            [
+                              _vm._v(
+                                "-- Please select an option --\n                        "
+                              )
+                            ]
+                          ),
+                          _vm._v(" "),
+                          _vm._l(_vm.agendas, function(agenda, id) {
+                            return _c(
+                              "b-form-select-option",
+                              { attrs: { value: id } },
+                              [
+                                _vm._v(
+                                  "\n                            " +
+                                    _vm._s(agenda) +
+                                    "\n                        "
+                                )
+                              ]
+                            )
+                          })
+                        ],
+                        2
+                      )
+                    ],
+                    1
+                  )
+                : _vm._e(),
+              _vm._v(" "),
               _vm.selected_platform_name !== null
                 ? _c("div", [
                     _c(
@@ -81857,13 +81953,7 @@ var render = function() {
                         [
                           _vm._v(
                             "\n                            " +
-                              _vm._s(
-                                credential.synchronized
-                                  ? credential.redirect
-                                    ? "Connection required"
-                                    : "Yes"
-                                  : "No"
-                              ) +
+                              _vm._s(_vm.getSynchronizedMessage(credential)) +
                               "\n                        "
                           )
                         ]

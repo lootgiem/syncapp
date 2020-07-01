@@ -19,6 +19,7 @@ class UpdateCredentialRequest extends FormRequest
     {
         return [
             'name' => 'required|string|max:255|min:3',
+            'agenda_id' => 'present|nullable|string',
             'synchronized' => 'required|bool',
             'secret' => 'present|array'
         ];

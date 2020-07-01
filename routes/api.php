@@ -11,7 +11,6 @@ Route::group(['middleware' => ['client']], function () {
         ->name('credentials');
 
     Route::get('/desynchronize/{credential}', 'ApiController@desynchronize')
-        ->middleware('can:update,credential')
         ->name('desynchronize');
 
     Route::get('/synchronize', 'ApiController@synchronize')

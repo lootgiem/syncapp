@@ -51,7 +51,9 @@ class OauthCodeConnector extends Connector implements iOauthCodeConnector
                 $credential = $credential->forceFill(['token' => null, 'secret' => $accessToken]);
             }
 
-            $credential = $credential->forceFill(['valid' => true]);
+            $credential = $credential->forceFill([
+                'valid' => $this->isValidCredential($credential)
+            ]);
         }
 
         if ($accessToken === false) {

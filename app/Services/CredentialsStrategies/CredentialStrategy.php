@@ -5,16 +5,18 @@ namespace App\Services\CredentialsStrategies;
 
 
 use App\Contracts\Services\Connectors\iConnector;
+use App\Contracts\Services\CredentialsStrategies\iCredentialStrategy;
 use App\Events\CredentialToDesynchronize;
 use App\Exceptions\CredentialException;
 use App\Http\Requests\StoreCredentialRequest;
 use App\Http\Requests\UpdateCredentialRequest;
 use App\Models\Credential;
 use App\Repositories\CredentialRepository;
+use App\Services\Platforms\Platform;
 use Illuminate\Support\Traits\Macroable;
 use Illuminate\Validation\ValidationException;
 
-class CredentialStrategy
+class CredentialStrategy implements iCredentialStrategy
 {
     use Macroable;
 
@@ -49,12 +51,29 @@ class CredentialStrategy
     {
         $credential = CredentialRepository::update($credential, $request);
 
-        return $this->validate($request, $credential, function () use ($credential, $request) {
-            $changes = $credential->getChanges();
-            if (array_key_exists('synchronized', $changes) && !$changes['synchronized']) {
-                event(new CredentialToDesynchronize($credential));
-            }
-        });
+        return $this->validate($request, $credential,
+            function () use ($credential, $request) {
+                $changes = $credential->getChanges();
+
+                if (array_key_exists('synchronized', $changes) && !$changes['synchronized']) {
+                    event(new CredentialToDesynchronize($credential));
+                }
+
+                if ($credential->platform->has_agendas) {
+                    $platform = Platform::resolve($credential);
+                    $platform->setUser($credential);
+
+                    if (array_key_exists($request->agenda_id, $platform->getAgendas())) {
+                        $credential->forceFill([
+                            'agenda' => $request->agenda_id,
+                            'valid' => true
+                        ])->save();
+                    }
+                    else {
+                        throw CredentialException::wrongAgenda();
+                    }
+                }
+            });
     }
 
     /**

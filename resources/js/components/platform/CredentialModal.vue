@@ -43,6 +43,18 @@
 
                     <google-calendar-form v-if="selected_platform_name === 'GoogleCalendar'"></google-calendar-form>
 
+                    <div v-if="canUpdateAgenda()" class="mt-3">
+                        <div>Select an agenda to synchronize :</div>
+                        <b-form-select v-model="form.agenda_id">
+                            <b-form-select-option :value="null" disabled selected>-- Please select an option --
+                            </b-form-select-option>
+                            <b-form-select-option v-for="(agenda, id) in agendas"
+                                                  :value="id">
+                                {{ agenda }}
+                            </b-form-select-option>
+                        </b-form-select>
+                    </div>
+
                     <div v-if="selected_platform_name !== null">
                         <div class="mt-3">
                             <b-form-checkbox id="synchronized" v-model="form.synchronized" name="synchronized" value="1"
@@ -58,7 +70,8 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal" @click="reset()">Close
                     </button>
-                    <button v-if="selected_platform_name !== null" type="button" class="btn btn-primary" @click="save()">
+                    <button v-if="selected_platform_name !== null" type="button" class="btn btn-primary"
+                            @click="save()">
                         {{ is_edit ? 'Save' : 'Add'}}
                     </button>
                 </div>
@@ -88,16 +101,21 @@
 
                 is_edit: false,
 
+                agendas: null,
+
+                has_agendas: null,
+
                 form: {
                     errors: [],
                     id: null,
                     platform_id: null,
+                    agenda_id: null,
                     name: null,
                     synchronized: 1,
                     secret: null
                 },
 
-                empty_form : null
+                empty_form: null
             }
         },
 
@@ -115,6 +133,11 @@
                 self.is_edit = true;
                 self.edit(credential);
                 self.setPlatformName();
+
+                if (self.has_agendas) {
+                    self.getAgendas(credential);
+                }
+
                 $('#modal-platform').modal('show');
             });
 
@@ -124,6 +147,17 @@
         },
 
         methods: {
+            getAgendas(credential) {
+                axios.get('/credential/agendas/' + credential.id)
+                    .then(response => {
+                        this.agendas = response.data.data
+                    });
+            },
+
+            canUpdateAgenda() {
+                return this.is_edit && this.has_agendas;
+            },
+
             getAvailablePlatforms() {
                 axios.get('/api/platforms')
                     .then(response => {
@@ -139,6 +173,8 @@
             reset() {
                 this.is_edit = false
                 this.selected_platform_name = null
+                this.agendas = null
+                this.has_agendas = null
                 this.form = this.duplicate(this.empty_form)
                 $('#modal-add-platform select').prop('selectedIndex', 0);
                 EventBus.$emit('resetSecret');
@@ -164,13 +200,16 @@
 
             edit(credential) {
                 this.selected_platform_name = credential.name
+                this.has_agendas = credential.platform.has_agendas;
+
                 this.form.id = credential.id
                 this.form.platform_id = credential.platform.id;
+                this.form.agenda_id = credential.agenda;
                 this.form.name = credential.name;
                 this.form.synchronized = credential.synchronized;
             },
 
-            getChildCredential(){
+            getChildCredential() {
                 let event_name = 'getSecret' + this.selected_platform_name + 'Form';
                 EventBus.$emit(event_name);
             },
@@ -199,8 +238,6 @@
                             form.errors = ['Something went wrong. Please try again.'];
                         }
                     });
-
-                console.log()
             }
         }
     }

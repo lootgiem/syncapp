@@ -24,6 +24,11 @@ abstract class Connector implements iConnector
      */
     abstract public function isValidConnectionRequest(array $request);
 
+    protected function isValidCredential($credential)
+    {
+        return ($credential->platform->has_agendas) ? !is_null($credential->agenda) : true;
+    }
+
     public function attemptConnection($credential, $closure = null)
     {
         $credential = $this->connect($credential);

@@ -19,15 +19,17 @@ class PlatformRepository
     /**
      * Store a new Platform.
      *
+     * @param $hasAgendas
      * @param $name
      * @param null $readableName
      * @param bool $available
      * @return Platform
      */
-    public static function store($name, $readableName = null, $available = true)
+    public static function store($hasAgendas, $name, $readableName = null, $available = true)
     {
         $platform = new Platform();
         $platform->forceFill([
+            'has_agendas' => $hasAgendas,
             'name' => $name,
             'readable_name' => $readableName ? $readableName : Str::kebab($name),
             'available' => $available,
@@ -47,14 +49,16 @@ class PlatformRepository
      * Update the given Platform.
      *
      * @param Platform $platform
+     * @param $hasAgendas
      * @param string $name
      * @param $readableName
      * @param $available
      * @return Platform
      */
-    public static function update(Platform $platform, $name, $readableName, $available)
+    public static function update(Platform $platform, $hasAgendas, $name, $readableName, $available)
     {
         $platform->forceFill([
+            'has_agendas' => $hasAgendas,
             'name' => $name,
             'readable_name' => $readableName,
             'available' => $available

@@ -27,6 +27,7 @@ class ApiController extends Controller
 
     public function desynchronize(Credential $credential)
     {
+        $this->authorize('update', $credential);
         event(new CredentialToDesynchronize($credential));
         return response()->json(['message' => 'Desynchronize job added to the queue']);
     }

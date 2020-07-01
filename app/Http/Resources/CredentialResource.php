@@ -24,8 +24,9 @@ class CredentialResource extends JsonResource
             'id' => $this->id,
             'platform' => new PlatformResource($this->platform),
             'name' => $this->name,
+            'agenda' => $this->agenda,
             'redirect' => $this->redirect,
-            'synchronized' => $this->synchronized,
+            'synchronized' => $this->synchronized
         ];
     }
 }

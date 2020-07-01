@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Web;
 
-use App\Events\CredentialDeleted;
 use App\Events\CredentialToDesynchronize;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreCredentialRequest;
@@ -12,16 +11,30 @@ use App\Models\Credential;
 use App\Repositories\CredentialRepository;
 use App\Services\Platforms\Platform;
 use Exception;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
-use Illuminate\Validation\ValidationException;
 
 class CredentialController extends Controller
 {
     public function __construct()
     {
         $this->authorizeResource(Credential::class, 'credential');
+    }
+
+    /**
+     * @param Credential $credential
+     * @return JsonResponse
+     * @throws AuthorizationException
+     */
+    public function agendas(Credential $credential)
+    {
+        $this->authorize('view', $credential);
+        $platform = Platform::resolve($credential);
+        $platform->setUser($credential);
+
+        return response()->json(['data' => $platform->getAgendas()]);
     }
 
     /**
@@ -41,7 +54,6 @@ class CredentialController extends Controller
      *
      * @param StoreCredentialRequest $request
      * @return CredentialResource
-     * @throws ValidationException
      */
     public function store(StoreCredentialRequest $request)
     {
@@ -67,7 +79,6 @@ class CredentialController extends Controller
      * @param UpdateCredentialRequest $request
      * @param Credential $credential
      * @return CredentialResource
-     * @throws ValidationException
      */
     public function update(UpdateCredentialRequest $request, Credential $credential)
     {

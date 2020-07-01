@@ -62,13 +62,13 @@ class DoctolibApi
         return $this->fromJson($response);
     }
 
-    public function getAppointments(array $dates)
+    public function getEvents(array $parameters)
     {
         $url = config('platforms.list.doctolib.api_endpoint') . '/events';
 
         $response = $this->client->get($url, [
             'headers' => static::jsonHeaders(),
-            'query' => $dates
+            'query' => $parameters,
         ]);
 
         return collect($this->fromJson($response)->data);

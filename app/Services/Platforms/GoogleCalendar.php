@@ -4,63 +4,40 @@
 namespace App\Services\Platforms;
 
 
-use App\Models\Credential;
 use App\Models\Event;
 use App\Repositories\EventRepository;
 use App\Services\Connectors\OauthCodeConnector;
-use App\Services\CredentialsStrategies\CredentialStrategy;
 use App\Services\CredentialsStrategies\OauthStrategy;
 use App\Services\GoogleOauthClient;
 use Carbon\Carbon;
-use Carbon\Exceptions\InvalidFormatException;
-use ErrorException;
 use Google_Service_Calendar;
 use Google_Service_Calendar_Event;
 use GuzzleHttp\Client;
 use Illuminate\Support\Collection;
 use LogicException;
-use Mockery\Exception;
 
-class GoogleCalendar extends Platform
+class GoogleCalendar extends ConnectablePlatform
 {
-    use ConnectablePlatform;
-
-
-    /**
-     * @var Credential
-     */
-    protected Credential $credential;
-
     /**
      * @var Google_Service_Calendar
      */
     protected Google_Service_Calendar $googleCalendarClient;
-
-    /**
-     * @var OauthCodeConnector
-     */
-    protected OauthCodeConnector $connector;
-
-    /**
-     * @var CredentialStrategy
-     */
-    protected CredentialStrategy $credentialStrategy;
-
 
     public function __construct(Client $httpClient)
     {
         $credentialPath = config('platforms.list.google_calendar.credential_path');
         $scope = config('platforms.list.google_calendar.scope');
         $redirect_url = route('oauth.callback');
-        $client =  new GoogleOauthClient($credentialPath, $scope, $redirect_url, $httpClient);
+        $client = new GoogleOauthClient($credentialPath, $scope, $redirect_url, $httpClient);
+        $connector = new OauthCodeConnector($client);
+        $credentialStrategy = new OauthStrategy($connector);
 
-        $this->connector = new OauthCodeConnector($client);
-        $this->credentialStrategy = new OauthStrategy($this->connector);
+        parent::__construct($connector, $credentialStrategy);
     }
 
     public function whenConnected()
     {
-        $oauthClient = $this->connector->getOauthClient();
+        $oauthClient = $this->getConnector()->getOauthClient();
         $this->googleCalendarClient = new Google_Service_Calendar($oauthClient);
     }
 
@@ -79,26 +56,54 @@ class GoogleCalendar extends Platform
             'maxResults' => 2500
         );
 
-        return $this->recursiveRetrieveEventsFromPlatform("primary", $optParams);
+        $agenda = $this->getCurrentCredential()->agenda;
+        return $this->recursiveRetrieveEventsFromPlatform($agenda, $optParams);
     }
 
     /**
-     * @param string $calendar_id
+     * @param $agenda
      * @param array $optParams
      * @return Collection
      */
-    private function recursiveRetrieveEventsFromPlatform($calendar_id, $optParams)
+    private function recursiveRetrieveEventsFromPlatform($agenda, $optParams)
     {
         $eventsAccumulator = collect();
-        $events = $this->googleCalendarClient->events->listEvents($calendar_id, $optParams);
+        $events = $this->googleCalendarClient->events->listEvents($agenda, $optParams);
         $eventsAccumulator = $eventsAccumulator->merge($events->getItems());
 
         if ($pageToken = $events->getNextPageToken()) {
             $optParams['pageToken'] = $pageToken;
-            $eventsAccumulator = $eventsAccumulator->merge($this->recursiveRetrieveEventsFromPlatform($calendar_id, $optParams));
+            $eventsAccumulator = $eventsAccumulator->merge($this->recursiveRetrieveEventsFromPlatform($agenda, $optParams));
         }
 
         return $eventsAccumulator;
+    }
+
+    /**
+     * @return Collection
+     */
+    protected function retrieveAgendas()
+    {
+        $agendas = $this->recursiveRetrieveAgendasFromPlatform();
+        return $agendas->pluck('summary', 'id');
+    }
+
+    /**
+     * @param array $optParams
+     * @return Collection
+     */
+    private function recursiveRetrieveAgendasFromPlatform($optParams = [])
+    {
+        $agendasAccumulator = collect();
+        $agendas = $this->googleCalendarClient->calendarList->listCalendarList($optParams);
+        $agendasAccumulator = $agendasAccumulator->merge($agendas->getItems());
+
+        if ($pageToken = $agendas->getNextPageToken()) {
+            $optParams['pageToken'] = $pageToken;
+            $agendasAccumulator = $agendasAccumulator->merge($this->recursiveRetrieveAgendasFromPlatform($optParams));
+        }
+
+        return $agendasAccumulator;
     }
 
     protected function filterRawEvents($rawEvents)
@@ -112,7 +117,8 @@ class GoogleCalendar extends Platform
      */
     public function pushEventToPlatform($rawEvent)
     {
-        $pushedEvent = $this->googleCalendarClient->events->insert('primary', $rawEvent);
+        $agenda = $this->getCurrentCredential()->agenda;
+        $pushedEvent = $this->googleCalendarClient->events->insert($agenda, $rawEvent);
         return $pushedEvent->id;
     }
 
@@ -121,7 +127,8 @@ class GoogleCalendar extends Platform
      */
     public function removeEventFromPlatform($event)
     {
-        $this->googleCalendarClient->events->delete("primary", $event->real_id);
+        $agenda = $this->getCurrentCredential()->agenda;
+        $this->googleCalendarClient->events->delete($agenda, $event->real_id);
     }
 
     /**

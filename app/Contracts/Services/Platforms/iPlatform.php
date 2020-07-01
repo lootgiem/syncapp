@@ -34,5 +34,4 @@ interface iPlatform
      * @param Collection $events
      */
     public function removeEvents(Collection $events);
-
 }
