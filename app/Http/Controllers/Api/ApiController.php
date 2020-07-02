@@ -10,7 +10,6 @@ use App\Jobs\SynchronizeJob;
 use App\Models\Credential;
 use App\Repositories\CredentialRepository;
 use App\Repositories\PlatformRepository;
-use App\Services\Synchronizer\SynchronizeService;
 use Illuminate\Http\Request;
 
 class ApiController extends Controller
@@ -36,17 +35,7 @@ class ApiController extends Controller
     public function synchronize(Request $request)
     {
         $userId = $request->user()->id;
-
-        $credentials = CredentialRepository::toSynchronizeForUser($userId);
-
-        if ($credentials->isNotEmpty()) {
-            $synchronizeService = new SynchronizeService($credentials);
-            return $synchronizeService->run();
-        }
-
-        return response()->json(['message' => 'failed no credentials']);
-
-//        SynchronizeJob::dispatch($userId);
-//        return response()->json(['message' => 'Synchronize job added to the queue']);
+        SynchronizeJob::dispatch($userId);
+        return response()->json(['message' => 'Synchronize job added to the queue']);
     }
 }

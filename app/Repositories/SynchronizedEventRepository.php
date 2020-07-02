@@ -24,12 +24,8 @@ class SynchronizedEventRepository
 
     public static function deleteRealIds($realIds)
     {
-        try {
-            SynchronizedEvent::whereIn('real_id', $realIds)->forceDelete();
-        } catch (\Exception $e) {
-            dump($e);
-            dd($realIds);
-        }
+        $realIds = array_map('strval', $realIds);
+        SynchronizedEvent::whereIn('real_id', $realIds)->forceDelete();
     }
 
     public static function store(string $eventId, int $credentialId, string $realId)
