@@ -103,7 +103,7 @@ abstract class Platform implements iPlatform
         foreach ($rawEvents as $eventRealId => $rawEvent) {
             try {
                 $id = $this->pushEventToPlatform($rawEvent);
-                $pushedEventsIds->put($eventRealId, $id);
+                $pushedEventsIds->put($eventRealId, strval($id));
             } catch (\Exception $e) {
                 Log::error('Error: "pushEventsToPlatform " -> ' . json_encode($rawEvent) . ' / message : ' . $e->getMessage());
             }
