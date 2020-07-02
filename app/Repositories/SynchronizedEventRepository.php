@@ -24,6 +24,7 @@ class SynchronizedEventRepository
 
     public static function deleteRealIds($realIds)
     {
+        dd($realIds);
         SynchronizedEvent::whereIn('real_id', $realIds)->forceDelete();
     }
 
