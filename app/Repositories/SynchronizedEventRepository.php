@@ -27,7 +27,7 @@ class SynchronizedEventRepository
         try {
             SynchronizedEvent::whereIn('real_id', $realIds)->forceDelete();
         } catch (\Exception $e) {
-            var_dump($e);
+            dump($e);
             dd($realIds);
         }
     }

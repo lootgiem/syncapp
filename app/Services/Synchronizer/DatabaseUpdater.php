@@ -45,7 +45,7 @@ class DatabaseUpdater
 
     protected function removeSynchronizedEventsFromDatabase(Collection $removedSynchronizedEvents)
     {
-        $realIds = $removedSynchronizedEvents->pluck('real_id')->all();
+        $realIds = array_map('strval', $removedSynchronizedEvents->pluck('real_id')->all());
         SynchronizedEventRepository::deleteRealIds($realIds);
     }
 
